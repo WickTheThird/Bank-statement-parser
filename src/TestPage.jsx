@@ -1,0 +1,2261 @@
+import { useState, useEffect } from 'react';
+import { parsePDF } from './utils/pdfParser';
+
+const EXPECTED_DATA_AIB = [
+  { date: "11 Nov 2024", details: "BALANCE FORWARD", debit: "", credit: "", balance: "3.77" },
+  { date: "12 Nov 2024", details: "Interest Rate Lending 11.85%", debit: "", credit: "", balance: "3.77" },
+  { date: "15 Nov 2024", details: "REVVAT1101999173CA IE24111590657656", debit: "", credit: "71.00", balance: "" },
+  { date: "15 Nov 2024", details: "SWIFT INTERIORS IE24111590376528", debit: "", credit: "2019.60", balance: "2094.37" },
+  { date: "18 Nov 2024", details: "*ATMLDG D'DRUM TCA HBB", debit: "", credit: "250.00", balance: "" },
+  { date: "18 Nov 2024", details: "VDA-SANDYFORD ROAD 15NOV24 18:53", debit: "300.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDA-SANDYFORD ROAD 15NOV24 18:54", debit: "300.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDA-SANDYFORD ROAD 16NOV24 11:45", debit: "300.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDA-SANDYFORD ROAD 16NOV24 11:46", debit: "300.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-BET365", debit: "10.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-BET365", debit: "10.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-BET365", debit: "10.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-BET365", debit: "50.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-ELECTRIC IRELA", debit: "223.82", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-PANDA", debit: "168.69", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-Revolut**0651*", debit: "10.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDP-Revolut**0651*", debit: "50.00", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDC-ARNOTTS", debit: "180.02", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDC-DUNNES BEACON", debit: "50.00", credit: "", balance: "381.84" },
+  { date: "18 Nov 2024", details: "BALANCE FORWARD", debit: "", credit: "", balance: "381.84" },
+  { date: "18 Nov 2024", details: "Interest Rate Lending 11.85%", debit: "", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDC-LIDL 0154 DUND", debit: "117.96", credit: "", balance: "" },
+  { date: "18 Nov 2024", details: "VDC-MAXOL SSTN SAN", debit: "10.00", credit: "", balance: "253.88" },
+  { date: "19 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "19 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "19 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "19 Nov 2024", details: "VDP-BET365", debit: "10.00", credit: "", balance: "" },
+  { date: "19 Nov 2024", details: "VDP-Revolut**0651*", debit: "25.00", credit: "", balance: "203.88" },
+  { date: "20 Nov 2024", details: "*ATMLDG D'DRUM TCA Card ending: 8582", debit: "", credit: "600.00", balance: "" },
+  { date: "20 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "20 Nov 2024", details: "VDP-BET365", debit: "10.00", credit: "", balance: "" },
+  { date: "20 Nov 2024", details: "VDP-BET365", debit: "15.00", credit: "", balance: "" },
+  { date: "20 Nov 2024", details: "VDP-SCREWFIX", debit: "30.90", credit: "", balance: "742.98" },
+  { date: "21 Nov 2024", details: "VDP-Revolut**0651*", debit: "580.00", credit: "", balance: "" },
+  { date: "21 Nov 2024", details: "VDC-TESCO STORES", debit: "8.00", credit: "", balance: "154.98" },
+  { date: "22 Nov 2024", details: "VDP-TESCO MOBILE", debit: "20.00", credit: "", balance: "134.98" },
+  { date: "25 Nov 2024", details: "*ATMLDG D'DRUM TCB Card ending: 8582", debit: "", credit: "300.00", balance: "" },
+  { date: "25 Nov 2024", details: "VDA-30649 CIRCLE K 23NOV24 09:01", debit: "20.00", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDP-Revolut**7495*", debit: "20.00", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDP-SCREWFIX", debit: "247.90", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-BUTLERS IRISH", debit: "3.90", credit: "", balance: "123.18" },
+  { date: "25 Nov 2024", details: "BALANCE FORWARD", debit: "", credit: "", balance: "123.18" },
+  { date: "25 Nov 2024", details: "Interest Rate Lending 11.85%", debit: "", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-CENTRA SANDYFO", debit: "16.20", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-CENTRA SANDYFO", debit: "19.49", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-DUNDRUM CAR PA", debit: "3.70", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-DUNNES BEACON", debit: "20.14", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-LIDL IRELAND L", debit: "15.67", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-LIDL 0154 DUND", debit: "6.75", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-POLONEZ DUNDRU", debit: "5.40", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-TESCO STORES", debit: "5.49", credit: "", balance: "" },
+  { date: "25 Nov 2024", details: "VDC-WICKLOW", debit: "1.00", credit: "", balance: "29.34" },
+  { date: "26 Nov 2024", details: "D/D EIR IE24112599688434", debit: "44.99", credit: "", balance: "15.65dr" },
+  { date: "27 Nov 2024", details: "UNPAY D/DEBIT", debit: "", credit: "44.99", balance: "" },
+  { date: "27 Nov 2024", details: "FEE-UNPAID D/DEBIT", debit: "10.00", credit: "", balance: "19.34" },
+  { date: "28 Nov 2024", details: "0000013440ZPOF62GR IE24112805445196", debit: "", credit: "200.00", balance: "219.34" },
+  { date: "29 Nov 2024", details: "VJFKK", debit: "", credit: "160.00", balance: "" },
+  { date: "29 Nov 2024", details: "SWIFT INTERIORS IE24112906361270", debit: "", credit: "2160.00", balance: "" },
+  { date: "29 Nov 2024", details: "ATM DUNDRUM 29NOV24 TIME 06:52", debit: "300.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "ATM DUNDRUM 29NOV24 TIME 06:53", debit: "300.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDP-Revolut**0651*", debit: "10.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDP-Revolut**0651*", debit: "40.00", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDC-CENTRA SANDYFO", debit: "2.65", credit: "", balance: "1871.69" },
+  { date: "29 Nov 2024", details: "BALANCE FORWARD", debit: "", credit: "", balance: "1871.69" },
+  { date: "29 Nov 2024", details: "Interest Rate Lending 11.85%", debit: "", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDC-LIDL 0154 DUND", debit: "5.44", credit: "", balance: "" },
+  { date: "29 Nov 2024", details: "VDC-POLONEZ DUNDRU", debit: "4.49", credit: "", balance: "1861.76" },
+  { date: "2 Dec 2024", details: "BB", debit: "", credit: "100.00", balance: "" },
+  { date: "2 Dec 2024", details: "ATM BRAY 30NOV24 TIME 09:47", debit: "600.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDA-30815 CIRCLE K WICKLOW 01DEC24 10:49", debit: "150.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDA-30815 CIRCLE K WICKLOW 01DEC24 10:50", debit: "150.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDA-30815 CIRCLE K WICKLOW 01DEC24 10:51", debit: "150.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDA-30815 CIRCLE K WICKLOW 01DEC24 10:51", debit: "150.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-APPLE.COM/BILL", debit: "2.99", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-APPLE.COM/BILL", debit: "17.99", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-CERTA DUNDRUM", debit: "60.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-Revolut**0651*", debit: "40.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDP-Revolut**0651*", debit: "50.00", credit: "", balance: "560.78" },
+  { date: "2 Dec 2024", details: "BALANCE FORWARD", debit: "", credit: "", balance: "560.78" },
+  { date: "2 Dec 2024", details: "Interest Rate Lending 11.85%", debit: "", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "SAVING", debit: "100.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-CRISTI AND ROB", debit: "20.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-DUNDRUM CAR PA", debit: "5.00", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-DUNNES BEACON", debit: "27.29", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-GALA BRAY", debit: "2.80", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-LIDL 0154 DUND", debit: "1.99", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-LIDL 0154 DUND", debit: "16.84", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-Moldova Stores", debit: "39.55", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-MCCABES PHARMA", debit: "20.27", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-Woodies Carric", debit: "19.97", credit: "", balance: "" },
+  { date: "2 Dec 2024", details: "VDC-ZARA", debit: "30.10", credit: "", balance: "276.97" },
+  { date: "3 Dec 2024", details: "*MOBI ONLINE SAVER", debit: "", credit: "100.00", balance: "" },
+  { date: "3 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "3 Dec 2024", details: "*MOBI TOP-UP 0892155151", debit: "15.00", credit: "", balance: "" },
+  { date: "3 Dec 2024", details: "VDC-ESSENCE PATISS", debit: "3.95", credit: "", balance: "" },
+  { date: "3 Dec 2024", details: "VDC-GREAT DUBLIN C", debit: "147.25", credit: "", balance: "205.77" },
+  { date: "4 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "4 Dec 2024", details: "*MOBI TOP-UP 0894116868", debit: "15.00", credit: "", balance: "" },
+  { date: "4 Dec 2024", details: "VDC-DUNDRUM CAR PA", debit: "5.00", credit: "", balance: "" },
+  { date: "4 Dec 2024", details: "VDC-MCCABES PHARMA", debit: "57.30", credit: "", balance: "123.47" },
+  { date: "5 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "5 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "5 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "108.47" },
+  { date: "6 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "6 Dec 2024", details: "VDP-BET365", debit: "5.00", credit: "", balance: "" },
+  { date: "6 Dec 2024", details: "VDP-EIR", debit: "44.99", credit: "", balance: "53.48" },
+];
+
+const EXPECTED_DATA_BOI = [
+  {
+    "date": "01 Dec 2023",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "6,183.03"
+  },
+  {
+    "date": "04 Dec 2023",
+    "details": "POSC01DEC TESCO STORE",
+    "debit": "4.35",
+    "credit": "",
+    "balance": "4.35"
+  },
+  {
+    "date": "05 Dec 2023",
+    "details": "POSC04DEC SQ *TRISPAC",
+    "debit": "20.20",
+    "credit": "",
+    "balance": "20.20"
+  },
+  {
+    "date": "06 Dec 2023",
+    "details": "POSC05DEC SQ *TRISPAC",
+    "debit": "12.80",
+    "credit": "",
+    "balance": "12.80"
+  },
+  {
+    "date": "07 Dec 2023",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "1,997.60",
+    "balance": ""
+  },
+  {
+    "date": "08 Dec 2023",
+    "details": "POSC07DEC SPAR SHANOW",
+    "debit": "4.79",
+    "credit": "",
+    "balance": "4.79"
+  },
+  {
+    "date": "11 Dec 2023",
+    "details": "POSC08DEC SPAR SHANOW",
+    "debit": "5.09",
+    "credit": "",
+    "balance": "5.09"
+  },
+  {
+    "date": "12 Dec 2023",
+    "details": "POSC11DEC ZAMBRERO",
+    "debit": "14.40",
+    "credit": "",
+    "balance": "14.40"
+  },
+  {
+    "date": "12 Dec 2023",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "1,930.46"
+  },
+  {
+    "date": "13 Dec 2023",
+    "details": "POSC12DEC SQ *TRISPAC",
+    "debit": "8.50",
+    "credit": "",
+    "balance": "8.50"
+  },
+  {
+    "date": "14 Dec 2023",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "60,938.40",
+    "balance": ""
+  },
+  {
+    "date": "15 Dec 2023",
+    "details": "DOC LTD",
+    "debit": "",
+    "credit": "7,982.32",
+    "balance": ""
+  },
+  {
+    "date": "18 Dec 2023",
+    "details": "POSC16DEC CIRCLE K BA",
+    "debit": "20.01",
+    "credit": "",
+    "balance": "20.01"
+  },
+  {
+    "date": "18 Dec 2023",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "9,856.57"
+  },
+  {
+    "date": "19 Dec 2023",
+    "details": "POSC18DEC PHARMHEALTH",
+    "debit": "7.95",
+    "credit": "",
+    "balance": "7.95"
+  },
+  {
+    "date": "20 Dec 2023",
+    "details": "DOC LTD",
+    "debit": "",
+    "credit": "5,004.80",
+    "balance": ""
+  },
+  {
+    "date": "21 Dec 2023",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "27,782.40",
+    "balance": ""
+  },
+  {
+    "date": "22 Dec 2023",
+    "details": "POSC21DEC TESCO STORE",
+    "debit": "32.80",
+    "credit": "",
+    "balance": "32.80"
+  },
+  {
+    "date": "28 Dec 2023",
+    "details": "POSC27DEC SMYTHS TOYS",
+    "debit": "7.98",
+    "credit": "",
+    "balance": "7.98"
+  },
+  {
+    "date": "29 Dec 2023",
+    "details": "POSC28DEC TESCO STORE",
+    "debit": "4.79",
+    "credit": "",
+    "balance": "4.79"
+  },
+  {
+    "date": "29 Dec 2023",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "6,335.63"
+  },
+  {
+    "date": "02 Jan 2024",
+    "details": "POSC31DEC SPAR CHERRY",
+    "debit": "8.00",
+    "credit": "",
+    "balance": "8.00"
+  },
+  {
+    "date": "03 Jan 2024",
+    "details": "365 Loan",
+    "debit": "",
+    "credit": "1.00",
+    "balance": "1.00"
+  },
+  {
+    "date": "04 Jan 2024",
+    "details": "POSC03JAN SQ *TRISPAC 21.40 5,031.39",
+    "debit": "21.40",
+    "credit": "",
+    "balance": "21.40"
+  },
+  {
+    "date": "05 Jan 2024",
+    "details": "365 Loan",
+    "debit": "",
+    "credit": "1,000.00",
+    "balance": ""
+  },
+  {
+    "date": "08 Jan 2024",
+    "details": "365 Loan",
+    "debit": "",
+    "credit": "14,000.00",
+    "balance": ""
+  },
+  {
+    "date": "08 Jan 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "14,545.45"
+  },
+  {
+    "date": "09 Jan 2024",
+    "details": "POSC08JAN TESCO STORE",
+    "debit": "11.39",
+    "credit": "",
+    "balance": "11.39"
+  },
+  {
+    "date": "10 Jan 2024",
+    "details": "POSC09JAN SQ *TRISPAC",
+    "debit": "12.25",
+    "credit": "",
+    "balance": "12.25"
+  },
+  {
+    "date": "11 Jan 2024",
+    "details": "POSC10JAN SQ *TRISPAC",
+    "debit": "12.25",
+    "credit": "",
+    "balance": "12.25"
+  },
+  {
+    "date": "12 Jan 2024",
+    "details": "POSC11JAN SQ *TRISPAC",
+    "debit": "16.10",
+    "credit": "",
+    "balance": "16.10"
+  },
+  {
+    "date": "15 Jan 2024",
+    "details": "POSC13JAN DUNDRUM CAR",
+    "debit": "3.30",
+    "credit": "",
+    "balance": "3.30"
+  },
+  {
+    "date": "16 Jan 2024",
+    "details": "POSC15JAN SQ *TRISPAC",
+    "debit": "4.25",
+    "credit": "",
+    "balance": "4.25"
+  },
+  {
+    "date": "17 Jan 2024",
+    "details": "POSC16JAN DUNDRUM (O2",
+    "debit": "35.00",
+    "credit": "",
+    "balance": "35.00"
+  },
+  {
+    "date": "18 Jan 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "40,864.00",
+    "balance": ""
+  },
+  {
+    "date": "18 Jan 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "26,570.88"
+  },
+  {
+    "date": "19 Jan 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "1,512.00",
+    "balance": ""
+  },
+  {
+    "date": "22 Jan 2024",
+    "details": "POSC20JAN SPAR SHANOW",
+    "debit": "2.35",
+    "credit": "",
+    "balance": "2.35"
+  },
+  {
+    "date": "23 Jan 2024",
+    "details": "POSC22JAN SPAR SHANOW",
+    "debit": "24.55",
+    "credit": "",
+    "balance": "24.55"
+  },
+  {
+    "date": "24 Jan 2024",
+    "details": "POSC23JAN CIRCLE K BA 40.03 2,112.51",
+    "debit": "40.03",
+    "credit": "",
+    "balance": "40.03"
+  },
+  {
+    "date": "25 Jan 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "1,178.00",
+    "balance": ""
+  },
+  {
+    "date": "26 Jan 2024",
+    "details": "POSC25JAN TESCO STORE",
+    "debit": "23.84",
+    "credit": "",
+    "balance": "23.84"
+  },
+  {
+    "date": "26 Jan 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "2,785.87"
+  },
+  {
+    "date": "29 Jan 2024",
+    "details": "POSC27JAN SPAR CHERRY",
+    "debit": "46.34",
+    "credit": "",
+    "balance": "46.34"
+  },
+  {
+    "date": "31 Jan 2024",
+    "details": "POSC30JAN CIRCLE K BA",
+    "debit": "40.01",
+    "credit": "",
+    "balance": "40.01"
+  },
+  {
+    "date": "01 Feb 2024",
+    "details": "POSC31JAN SQ *TRISPAC",
+    "debit": "12.70",
+    "credit": "",
+    "balance": "881.58"
+  },
+  {
+    "date": "02 Feb 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "43,328.00",
+    "balance": ""
+  },
+  {
+    "date": "06 Feb 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "360.00",
+    "balance": "360.00"
+  },
+  {
+    "date": "06 Feb 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "11,922.56"
+  },
+  {
+    "date": "07 Feb 2024",
+    "details": "POSC06FEB SQ *TRISPAC",
+    "debit": "13.25",
+    "credit": "",
+    "balance": "13.25"
+  },
+  {
+    "date": "08 Feb 2024",
+    "details": "POSC07FEB CIRCLE K BA",
+    "debit": "20.04",
+    "credit": "",
+    "balance": "20.04"
+  },
+  {
+    "date": "09 Feb 2024",
+    "details": "POSC08FEB SQ *TRISPAC",
+    "debit": "19.00",
+    "credit": "",
+    "balance": "19.00"
+  },
+  {
+    "date": "12 Feb 2024",
+    "details": "POSC10FEB POLONEZ TAL",
+    "debit": "9.96",
+    "credit": "",
+    "balance": "9.96"
+  },
+  {
+    "date": "13 Feb 2024",
+    "details": "POSC12FEB SQ *TRISPAC",
+    "debit": "12.75",
+    "credit": "",
+    "balance": "12.75"
+  },
+  {
+    "date": "14 Feb 2024",
+    "details": "POSC13FEB SPAR SHANOW",
+    "debit": "24.55",
+    "credit": "",
+    "balance": "24.55"
+  },
+  {
+    "date": "15 Feb 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "65,382.40",
+    "balance": ""
+  },
+  {
+    "date": "15 Feb 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "65,695.79"
+  },
+  {
+    "date": "16 Feb 2024",
+    "details": "A/C TRANSFER 124319",
+    "debit": "",
+    "credit": "20,160.00",
+    "balance": ""
+  },
+  {
+    "date": "19 Feb 2024",
+    "details": "POSC16FEB CIRCLE K BA",
+    "debit": "30.10",
+    "credit": "",
+    "balance": "30.10"
+  },
+  {
+    "date": "20 Feb 2024",
+    "details": "POSC19FEB SQ *TRISPAC",
+    "debit": "8.95",
+    "credit": "",
+    "balance": "8.95"
+  },
+  {
+    "date": "21 Feb 2024",
+    "details": "365 Online ION MERE",
+    "debit": "",
+    "credit": "1,000.00",
+    "balance": ""
+  },
+  {
+    "date": "22 Feb 2024",
+    "details": "POSC21FEB CIRCLE K BA",
+    "debit": "40.01",
+    "credit": "",
+    "balance": "40.01"
+  },
+  {
+    "date": "23 Feb 2024",
+    "details": "POSC22FEB SQ *TRISPAC 17.20 2,620.85",
+    "debit": "17.20",
+    "credit": "",
+    "balance": "17.20"
+  },
+  {
+    "date": "26 Feb 2024",
+    "details": "POSC24FEB TESCO STORE",
+    "debit": "34.70",
+    "credit": "",
+    "balance": "34.70"
+  },
+  {
+    "date": "26 Feb 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "2,582.15"
+  },
+  {
+    "date": "27 Feb 2024",
+    "details": "POSC26FEB SPAR SHANOW",
+    "debit": "24.55",
+    "credit": "",
+    "balance": "24.55"
+  },
+  {
+    "date": "28 Feb 2024",
+    "details": "POSC27FEB SPAR SHANOW",
+    "debit": "7.59",
+    "credit": "",
+    "balance": "7.59"
+  },
+  {
+    "date": "29 Feb 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "26,015.20",
+    "balance": ""
+  },
+  {
+    "date": "01 Mar 2024",
+    "details": "A/C TRANSFER 219452",
+    "debit": "",
+    "credit": "9,215.00",
+    "balance": ""
+  },
+  {
+    "date": "01 Mar 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "16,945.81"
+  },
+  {
+    "date": "04 Mar 2024",
+    "details": "POSC01MAR TESCO STORE",
+    "debit": "8.75",
+    "credit": "",
+    "balance": "8.75"
+  },
+  {
+    "date": "05 Mar 2024",
+    "details": "POSC04MAR SPAR SHANOW",
+    "debit": "24.65",
+    "credit": "",
+    "balance": "24.65"
+  },
+  {
+    "date": "06 Mar 2024",
+    "details": "POSC05MAR SPAR SHANOW",
+    "debit": "7.59",
+    "credit": "",
+    "balance": "361.46"
+  },
+  {
+    "date": "07 Mar 2024",
+    "details": "POSC06MAR SPAR SHANOW",
+    "debit": "8.08",
+    "credit": "",
+    "balance": "8.08"
+  },
+  {
+    "date": "08 Mar 2024",
+    "details": "POSC07MAR SPAR SHANOW",
+    "debit": "7.79",
+    "credit": "",
+    "balance": "328.09"
+  },
+  {
+    "date": "11 Mar 2024",
+    "details": "POSC10MAR TESCO STORE",
+    "debit": "16.99",
+    "credit": "",
+    "balance": "16.99"
+  },
+  {
+    "date": "12 Mar 2024",
+    "details": "POSC11MAR SPAR SHANOW",
+    "debit": "4.18",
+    "credit": "",
+    "balance": "4.18"
+  },
+  {
+    "date": "14 Mar 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "52,032.00",
+    "balance": ""
+  },
+  {
+    "date": "15 Mar 2024",
+    "details": "DOC LTD",
+    "debit": "",
+    "credit": "4,867.92",
+    "balance": ""
+  },
+  {
+    "date": "15 Mar 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "56,919.98"
+  },
+  {
+    "date": "19 Mar 2024",
+    "details": "POSC17MAR SumUp *Wm",
+    "debit": "8.00",
+    "credit": "",
+    "balance": "8.00"
+  },
+  {
+    "date": "20 Mar 2024",
+    "details": "POSC19MAR SPAR SHANOW",
+    "debit": "32.44",
+    "credit": "",
+    "balance": "32.44"
+  },
+  {
+    "date": "21 Mar 2024",
+    "details": "POSC20MAR SPAR SHANOW",
+    "debit": "7.80",
+    "credit": "",
+    "balance": "7.80"
+  },
+  {
+    "date": "21 Mar 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "2,614.93"
+  },
+  {
+    "date": "22 Mar 2024",
+    "details": "POSC21MAR SQ *TRISPAC",
+    "debit": "13.95",
+    "credit": "",
+    "balance": "13.95"
+  },
+  {
+    "date": "25 Mar 2024",
+    "details": "POSC23MAR TESCO STORE",
+    "debit": "16.65",
+    "credit": "",
+    "balance": "16.65"
+  },
+  {
+    "date": "26 Mar 2024",
+    "details": "POSC25MAR CIRCLE K BA",
+    "debit": "40.00",
+    "credit": "",
+    "balance": "40.00"
+  },
+  {
+    "date": "27 Mar 2024",
+    "details": "POSC26MAR SPAR SHANOW",
+    "debit": "4.79",
+    "credit": "",
+    "balance": "4.79"
+  },
+  {
+    "date": "28 Mar 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "30,032.00",
+    "balance": ""
+  },
+  {
+    "date": "02 Apr 2024",
+    "details": "POSC28MAR TESCO STORE",
+    "debit": "7.20",
+    "credit": "",
+    "balance": "7.20"
+  },
+  {
+    "date": "02 Apr 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "31,322.25"
+  },
+  {
+    "date": "03 Apr 2024",
+    "details": "POSC02APR SPAR CHERRY",
+    "debit": "10.05",
+    "credit": "",
+    "balance": "10.05"
+  },
+  {
+    "date": "04 Apr 2024",
+    "details": "POSC03APR SPAR SHANOW",
+    "debit": "27.65",
+    "credit": "",
+    "balance": "27.65"
+  },
+  {
+    "date": "05 Apr 2024",
+    "details": "POSC04APR SQ *TRISPAC",
+    "debit": "17.40",
+    "credit": "",
+    "balance": "17.40"
+  },
+  {
+    "date": "08 Apr 2024",
+    "details": "POSC05APR SPAR SHANOW",
+    "debit": "10.04",
+    "credit": "",
+    "balance": "10.04"
+  },
+  {
+    "date": "08 Apr 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "739.74",
+    "credit": "",
+    "balance": "739.74"
+  },
+  {
+    "date": "10 Apr 2024",
+    "details": "POSC09APR SPAR SHANOW",
+    "debit": "14.80",
+    "credit": "",
+    "balance": "14.80"
+  },
+  {
+    "date": "11 Apr 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "37,660.80",
+    "balance": ""
+  },
+  {
+    "date": "12 Apr 2024",
+    "details": "POSC11APR SQ *TRISPAC",
+    "debit": "15.40",
+    "credit": "",
+    "balance": "15.40"
+  },
+  {
+    "date": "15 Apr 2024",
+    "details": "POSC12APR CIRCLE K EG",
+    "debit": "10.00",
+    "credit": "",
+    "balance": "10.00"
+  },
+  {
+    "date": "15 Apr 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "12,710.68"
+  },
+  {
+    "date": "16 Apr 2024",
+    "details": "POSC13APR SAMS BARBER",
+    "debit": "30.00",
+    "credit": "",
+    "balance": "30.00"
+  },
+  {
+    "date": "17 Apr 2024",
+    "details": "POSC16APR CIRCLE K BA",
+    "debit": "40.00",
+    "credit": "",
+    "balance": "40.00"
+  },
+  {
+    "date": "18 Apr 2024",
+    "details": "POSC17APR TESCO STORE",
+    "debit": "7.20",
+    "credit": "",
+    "balance": "7.20"
+  },
+  {
+    "date": "19 Apr 2024",
+    "details": "POSC18APR SPAR NEWCAS",
+    "debit": "34.15",
+    "credit": "",
+    "balance": "34.15"
+  },
+  {
+    "date": "22 Apr 2024",
+    "details": "POSC19APR TESCO STORE",
+    "debit": "18.69",
+    "credit": "",
+    "balance": "18.69"
+  },
+  {
+    "date": "23 Apr 2024",
+    "details": "POSC22APR SQ *TRISPAC",
+    "debit": "19.35",
+    "credit": "",
+    "balance": "19.35"
+  },
+  {
+    "date": "23 Apr 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "775.78",
+    "credit": "",
+    "balance": "775.78"
+  },
+  {
+    "date": "24 Apr 2024",
+    "details": "POSC23APR SPAR SHANOW",
+    "debit": "14.80",
+    "credit": "",
+    "balance": "14.80"
+  },
+  {
+    "date": "25 Apr 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "55,241.60",
+    "balance": ""
+  },
+  {
+    "date": "26 Apr 2024",
+    "details": "POSC25APR SPAR SHANOW",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "29 Apr 2024",
+    "details": "POSC27APR TEXACO CORN",
+    "debit": "19.00",
+    "credit": "",
+    "balance": "19.00"
+  },
+  {
+    "date": "29 Apr 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "33,843.72"
+  },
+  {
+    "date": "30 Apr 2024",
+    "details": "POSC29APR SPAR SHANOW",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "01 May 2024",
+    "details": "POSC30APR SQ *TRISPAC",
+    "debit": "26.75",
+    "credit": "",
+    "balance": "26.75"
+  },
+  {
+    "date": "02 May 2024",
+    "details": "POS01MAY SQ *TRISPACE 24.25 2,741.67",
+    "debit": "24.25",
+    "credit": "",
+    "balance": "24.25"
+  },
+  {
+    "date": "03 May 2024",
+    "details": "POSC02MAY SQ *TRISPAC",
+    "debit": "30.70",
+    "credit": "",
+    "balance": "30.70"
+  },
+  {
+    "date": "07 May 2024",
+    "details": "POSC04MAY TEXACO CORN",
+    "debit": "10.50",
+    "credit": "",
+    "balance": "10.50"
+  },
+  {
+    "date": "07 May 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "1,847.86"
+  },
+  {
+    "date": "08 May 2024",
+    "details": "POSC04MAY SAMS BARBER",
+    "debit": "30.00",
+    "credit": "",
+    "balance": "30.00"
+  },
+  {
+    "date": "09 May 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "42,949.60",
+    "balance": ""
+  },
+  {
+    "date": "10 May 2024",
+    "details": "POSC09MAY WWW.DCU.IE*",
+    "debit": "16.20",
+    "credit": "",
+    "balance": "16.20"
+  },
+  {
+    "date": "10 May 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "29,410.85"
+  },
+  {
+    "date": "13 May 2024",
+    "details": "POSC11MAY SPAR SHANOW",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "14 May 2024",
+    "details": "POS13MAY SQ *TRISPACE",
+    "debit": "5.45",
+    "credit": "",
+    "balance": "5.45"
+  },
+  {
+    "date": "15 May 2024",
+    "details": "POSC14MAY SQ *TRISPAC",
+    "debit": "16.90",
+    "credit": "",
+    "balance": "16.90"
+  },
+  {
+    "date": "15 May 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "8,864.38"
+  },
+  {
+    "date": "16 May 2024",
+    "details": "POSC15MAY LONDIS DCU",
+    "debit": "7.30",
+    "credit": "",
+    "balance": "7.30"
+  },
+  {
+    "date": "17 May 2024",
+    "details": "POSC16MAY SPAR CHERRY",
+    "debit": "4.70",
+    "credit": "",
+    "balance": "4.70"
+  },
+  {
+    "date": "20 May 2024",
+    "details": "POSC17MAY SPAR SHANOW",
+    "debit": "27.65",
+    "credit": "",
+    "balance": "27.65"
+  },
+  {
+    "date": "21 May 2024",
+    "details": "POSC20MAY SPAR SHANOW",
+    "debit": "4.45",
+    "credit": "",
+    "balance": "4.45"
+  },
+  {
+    "date": "22 May 2024",
+    "details": "POSC21MAY LONDIS DCU",
+    "debit": "5.55",
+    "credit": "",
+    "balance": "5.55"
+  },
+  {
+    "date": "23 May 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "27,313.60",
+    "balance": ""
+  },
+  {
+    "date": "24 May 2024",
+    "details": "POSC23MAY SPAR SHANOW",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "24 May 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "34,292.29"
+  },
+  {
+    "date": "27 May 2024",
+    "details": "POSC25MAY CENTRA",
+    "debit": "16.75",
+    "credit": "",
+    "balance": "16.75"
+  },
+  {
+    "date": "28 May 2024",
+    "details": "POSC27MAY SPAR SHANOW",
+    "debit": "10.40",
+    "credit": "",
+    "balance": "10.40"
+  },
+  {
+    "date": "29 May 2024",
+    "details": "POSC28MAY SPAR SHANOW",
+    "debit": "14.80",
+    "credit": "",
+    "balance": "14.80"
+  },
+  {
+    "date": "29 May 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "7,116.63"
+  },
+  {
+    "date": "30 May 2024",
+    "details": "POSC29MAY LONDIS DCU",
+    "debit": "14.20",
+    "credit": "",
+    "balance": "14.20"
+  },
+  {
+    "date": "31 May 2024",
+    "details": "POSC30MAY SPAR SHANOW",
+    "debit": "24.65",
+    "credit": "",
+    "balance": "24.65"
+  },
+  {
+    "date": "31 May 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "6,537.98"
+  },
+  {
+    "date": "04 Jun 2024",
+    "details": "POSC03JUN TESCO STORE",
+    "debit": "12.40",
+    "credit": "",
+    "balance": "12.40"
+  },
+  {
+    "date": "05 Jun 2024",
+    "details": "POSC04JUN SPAR SHANOW",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "06 Jun 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "23,546.40",
+    "balance": ""
+  },
+  {
+    "date": "07 Jun 2024",
+    "details": "POSC06JUN LONDIS DCU",
+    "debit": "5.25",
+    "credit": "",
+    "balance": "5.25"
+  },
+  {
+    "date": "07 Jun 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "23,166.78"
+  },
+  {
+    "date": "10 Jun 2024",
+    "details": "POSC08JUN SPAR SHANOW",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "11 Jun 2024",
+    "details": "POSC10JUN SQ *TRISPAC",
+    "debit": "12.40",
+    "credit": "",
+    "balance": "12.40"
+  },
+  {
+    "date": "12 Jun 2024",
+    "details": "POSC11JUN TESCO STORE",
+    "debit": "2.45",
+    "credit": "",
+    "balance": "2.45"
+  },
+  {
+    "date": "13 Jun 2024",
+    "details": "POSC12JUN SQ *TRISPAC",
+    "debit": "16.20",
+    "credit": "",
+    "balance": "16.20"
+  },
+  {
+    "date": "14 Jun 2024",
+    "details": "POSC13JUN TESCO STORE",
+    "debit": "24.84",
+    "credit": "",
+    "balance": "24.84"
+  },
+  {
+    "date": "14 Jun 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "6,656.30"
+  },
+  {
+    "date": "17 Jun 2024",
+    "details": "POSC14JUN LONDIS DCU",
+    "debit": "4.30",
+    "credit": "",
+    "balance": "4.30"
+  },
+  {
+    "date": "18 Jun 2024",
+    "details": "POSC17JUN CIRCLE K BA",
+    "debit": "40.01",
+    "credit": "",
+    "balance": "40.01"
+  },
+  {
+    "date": "19 Jun 2024",
+    "details": "POSC18JUN LONDIS DCU",
+    "debit": "7.80",
+    "credit": "",
+    "balance": "7.80"
+  },
+  {
+    "date": "20 Jun 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "17,414.40",
+    "balance": ""
+  },
+  {
+    "date": "21 Jun 2024",
+    "details": "POSC20JUN SPAR CHERRY",
+    "debit": "14.10",
+    "credit": "",
+    "balance": "14.10"
+  },
+  {
+    "date": "21 Jun 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "19,256.81"
+  },
+  {
+    "date": "24 Jun 2024",
+    "details": "POSC21JUN SPAR SHANOW",
+    "debit": "3.79",
+    "credit": "",
+    "balance": "3.79"
+  },
+  {
+    "date": "25 Jun 2024",
+    "details": "POSC22JUN SAMS BARBER",
+    "debit": "30.00",
+    "credit": "",
+    "balance": "30.00"
+  },
+  {
+    "date": "26 Jun 2024",
+    "details": "POSC25JUN LOUGH INN",
+    "debit": "14.60",
+    "credit": "",
+    "balance": "14.60"
+  },
+  {
+    "date": "27 Jun 2024",
+    "details": "POSC26JUN SPAR SHANOW",
+    "debit": "2.00",
+    "credit": "",
+    "balance": "2.00"
+  },
+  {
+    "date": "28 Jun 2024",
+    "details": "POSC27JUN SPAR SHANOW",
+    "debit": "24.30",
+    "credit": "",
+    "balance": "24.30"
+  },
+  {
+    "date": "01 Jul 2024",
+    "details": "POSC28JUN LONDIS DCU",
+    "debit": "5.35",
+    "credit": "",
+    "balance": "5.35"
+  },
+  {
+    "date": "01 Jul 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "4,934.79"
+  },
+  {
+    "date": "02 Jul 2024",
+    "details": "POSC01JUL SPAR SHANOW",
+    "debit": "13.69",
+    "credit": "",
+    "balance": "13.69"
+  },
+  {
+    "date": "03 Jul 2024",
+    "details": "POSC02JUL SPAR SHANOW",
+    "debit": "15.60",
+    "credit": "",
+    "balance": "15.60"
+  },
+  {
+    "date": "04 Jul 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "19,350.40",
+    "balance": ""
+  },
+  {
+    "date": "05 Jul 2024",
+    "details": "POSC04JUL SPAR SHANOW 13.69 23,563.02",
+    "debit": "13.69",
+    "credit": "",
+    "balance": "13.69"
+  },
+  {
+    "date": "08 Jul 2024",
+    "details": "POSC06JUL SPAR CHERRY",
+    "debit": "8.60",
+    "credit": "",
+    "balance": "8.60"
+  },
+  {
+    "date": "08 Jul 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "14,327.59"
+  },
+  {
+    "date": "09 Jul 2024",
+    "details": "POSC08JUL SPAR SHANOW",
+    "debit": "32.05",
+    "credit": "",
+    "balance": "32.05"
+  },
+  {
+    "date": "10 Jul 2024",
+    "details": "POSC09JUL LOUGH INN",
+    "debit": "3.60",
+    "credit": "",
+    "balance": "3.60"
+  },
+  {
+    "date": "11 Jul 2024",
+    "details": "POSC10JUL SPAR SHANOW",
+    "debit": "16.90",
+    "credit": "",
+    "balance": "16.90"
+  },
+  {
+    "date": "12 Jul 2024",
+    "details": "POSC11JUL CIRCLE K BA",
+    "debit": "20.00",
+    "credit": "",
+    "balance": "20.00"
+  },
+  {
+    "date": "15 Jul 2024",
+    "details": "POSC11JUL 28302152 DU",
+    "debit": "33.45",
+    "credit": "",
+    "balance": "33.45"
+  },
+  {
+    "date": "16 Jul 2024",
+    "details": "365 RIE LTD 500.00 3,148.08",
+    "debit": "",
+    "credit": "500.00",
+    "balance": "500.00"
+  },
+  {
+    "date": "18 Jul 2024",
+    "details": "PARAMUD BROTHERS LTD 13,396.80",
+    "debit": "",
+    "credit": "16,544.88",
+    "balance": ""
+  },
+  {
+    "date": "22 Jul 2024",
+    "details": "NEPOSCHGMDL",
+    "debit": "000001.72",
+    "credit": "",
+    "balance": "1.72"
+  },
+  {
+    "date": "22 Jul 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "12,037.24"
+  },
+  {
+    "date": "23 Jul 2024",
+    "details": "C2207MD558.40@0.05248",
+    "debit": "29.31",
+    "credit": "",
+    "balance": "29.31"
+  },
+  {
+    "date": "25 Jul 2024",
+    "details": "C2407MD289.00@0.05228",
+    "debit": "15.11",
+    "credit": "",
+    "balance": "15.11"
+  },
+  {
+    "date": "01 Aug 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "4,492.80",
+    "balance": ""
+  },
+  {
+    "date": "06 Aug 2024",
+    "details": "C0208MD507.84@0.05289",
+    "debit": "26.86",
+    "credit": "",
+    "balance": "26.86"
+  },
+  {
+    "date": "12 Aug 2024",
+    "details": "C1008MD775.23@0.05244",
+    "debit": "40.66",
+    "credit": "",
+    "balance": "40.66"
+  },
+  {
+    "date": "12 Aug 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "2,624.32"
+  },
+  {
+    "date": "13 Aug 2024",
+    "details": "C1208MD552.20@0.05244",
+    "debit": "28.96",
+    "credit": "",
+    "balance": "28.96"
+  },
+  {
+    "date": "14 Aug 2024",
+    "details": "POSC13AUG TESCO STORE",
+    "debit": "3.99",
+    "credit": "",
+    "balance": "3.99"
+  },
+  {
+    "date": "15 Aug 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "7,446.40",
+    "balance": ""
+  },
+  {
+    "date": "16 Aug 2024",
+    "details": "POSC15AUG SQ *TRISPAC",
+    "debit": "8.00",
+    "credit": "",
+    "balance": "8.00"
+  },
+  {
+    "date": "19 Aug 2024",
+    "details": "POSC17AUG SPAR CHERRY",
+    "debit": "9.75",
+    "credit": "",
+    "balance": "9.75"
+  },
+  {
+    "date": "19 Aug 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "8,839.28"
+  },
+  {
+    "date": "20 Aug 2024",
+    "details": "POSC19AUG POLONEZ TAL",
+    "debit": "30.86",
+    "credit": "",
+    "balance": "30.86"
+  },
+  {
+    "date": "21 Aug 2024",
+    "details": "POSC20AUG SPAR SHANOW",
+    "debit": "18.53",
+    "credit": "",
+    "balance": "18.53"
+  },
+  {
+    "date": "22 Aug 2024",
+    "details": "POSC21AUG SPAR CHERRY",
+    "debit": "13.03",
+    "credit": "",
+    "balance": "13.03"
+  },
+  {
+    "date": "23 Aug 2024",
+    "details": "POSC22AUG SPAR SHANOW",
+    "debit": "9.10",
+    "credit": "",
+    "balance": "9.10"
+  },
+  {
+    "date": "26 Aug 2024",
+    "details": "POSC24AUG TEXACO CORN",
+    "debit": "4.00",
+    "credit": "",
+    "balance": "4.00"
+  },
+  {
+    "date": "26 Aug 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "1,783.64"
+  },
+  {
+    "date": "27 Aug 2024",
+    "details": "POSC25AUG DUBLIN AIRP",
+    "debit": "3.00",
+    "credit": "",
+    "balance": "3.00"
+  },
+  {
+    "date": "28 Aug 2024",
+    "details": "POSC27AUG SPAR CHERRY",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "29 Aug 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "7,500.00",
+    "balance": ""
+  },
+  {
+    "date": "30 Aug 2024",
+    "details": "POSC29AUG SPAR LEAPOR",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "30 Aug 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "9,080.65"
+  },
+  {
+    "date": "02 Sep 2024",
+    "details": "POSC30AUG SPAR LEAPOR",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "03 Sep 2024",
+    "details": "POSC02SEP TESCO STORE",
+    "debit": "8.99",
+    "credit": "",
+    "balance": "8.99"
+  },
+  {
+    "date": "04 Sep 2024",
+    "details": "POSC03SEP SPAR SHANOW",
+    "debit": "4.60",
+    "credit": "",
+    "balance": "4.60"
+  },
+  {
+    "date": "05 Sep 2024",
+    "details": "POSC04SEP SPAR SHANOW",
+    "debit": "6.18",
+    "credit": "",
+    "balance": "6.18"
+  },
+  {
+    "date": "06 Sep 2024",
+    "details": "POSC05SEP SPAR CHERRY",
+    "debit": "15.10",
+    "credit": "",
+    "balance": "15.10"
+  },
+  {
+    "date": "09 Sep 2024",
+    "details": "POSC06SEP SPAR MONKST",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "09 Sep 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "1,236.24"
+  },
+  {
+    "date": "10 Sep 2024",
+    "details": "POSC09SEP SPAR CHERRY",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "11 Sep 2024",
+    "details": "POSC10SEP SPAR LEAPOR",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "12 Sep 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "6,271.20",
+    "balance": ""
+  },
+  {
+    "date": "13 Sep 2024",
+    "details": "POSC12SEP SPAR CHERRY",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "16 Sep 2024",
+    "details": "POSC14SEP TESCO STORE",
+    "debit": "7.00",
+    "credit": "",
+    "balance": "7.00"
+  },
+  {
+    "date": "17 Sep 2024",
+    "details": "POSC16SEP The Coffee",
+    "debit": "5.75",
+    "credit": "",
+    "balance": "5.75"
+  },
+  {
+    "date": "18 Sep 2024",
+    "details": "365 MOLD INTERIORS",
+    "debit": "",
+    "credit": "1,248.00",
+    "balance": ""
+  },
+  {
+    "date": "18 Sep 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "3,621.00"
+  },
+  {
+    "date": "19 Sep 2024",
+    "details": "POSC18SEP SPAR SHANOW",
+    "debit": "5.70",
+    "credit": "",
+    "balance": "5.70"
+  },
+  {
+    "date": "20 Sep 2024",
+    "details": "POSC19SEP SPAR SHANOW",
+    "debit": "7.77",
+    "credit": "",
+    "balance": "7.77"
+  },
+  {
+    "date": "23 Sep 2024",
+    "details": "POSC21SEP TESCO STORE",
+    "debit": "27.50",
+    "credit": "",
+    "balance": "27.50"
+  },
+  {
+    "date": "24 Sep 2024",
+    "details": "365 MOLD INTERIORS",
+    "debit": "",
+    "credit": "7,526.40",
+    "balance": ""
+  },
+  {
+    "date": "25 Sep 2024",
+    "details": "POSC24SEP TESCO STORE",
+    "debit": "6.19",
+    "credit": "",
+    "balance": "6.19"
+  },
+  {
+    "date": "26 Sep 2024",
+    "details": "POSC25SEP SPAR SHANOW",
+    "debit": "8.29",
+    "credit": "",
+    "balance": "8.29"
+  },
+  {
+    "date": "27 Sep 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "7,862.40",
+    "balance": ""
+  },
+  {
+    "date": "27 Sep 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "10,415.80"
+  },
+  {
+    "date": "30 Sep 2024",
+    "details": "POSC28SEP Moldova Sto",
+    "debit": "24.96",
+    "credit": "",
+    "balance": "24.96"
+  },
+  {
+    "date": "01 Oct 2024",
+    "details": "POSC30SEP CIRCLE K EG",
+    "debit": "6.85",
+    "credit": "",
+    "balance": "6.85"
+  },
+  {
+    "date": "02 Oct 2024",
+    "details": "POSC01OCT LOUGH INN",
+    "debit": "7.60",
+    "credit": "",
+    "balance": "7.60"
+  },
+  {
+    "date": "03 Oct 2024",
+    "details": "POSC02OCT SPAR CHERRY",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "04 Oct 2024",
+    "details": "POSC03OCT SPAR CHERRY",
+    "debit": "7.40",
+    "credit": "",
+    "balance": "7.40"
+  },
+  {
+    "date": "07 Oct 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "201.00",
+    "balance": "201.00"
+  },
+  {
+    "date": "07 Oct 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "1,669.10"
+  },
+  {
+    "date": "08 Oct 2024",
+    "details": "POSC07OCT CIRCLE K BA",
+    "debit": "20.01",
+    "credit": "",
+    "balance": "20.01"
+  },
+  {
+    "date": "09 Oct 2024",
+    "details": "POSC08OCT SPAR SHANOW",
+    "debit": "7.84",
+    "credit": "",
+    "balance": "7.84"
+  },
+  {
+    "date": "10 Oct 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "7,142.40",
+    "balance": ""
+  },
+  {
+    "date": "11 Oct 2024",
+    "details": "POSC10OCT POLO STORES",
+    "debit": "8.71",
+    "credit": "",
+    "balance": "8.71"
+  },
+  {
+    "date": "14 Oct 2024",
+    "details": "365 MOLD INTERIORS p",
+    "debit": "",
+    "credit": "7,620.80",
+    "balance": ""
+  },
+  {
+    "date": "14 Oct 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "15,906.62"
+  },
+  {
+    "date": "15 Oct 2024",
+    "details": "POSC14OCT SPAR CHERRY",
+    "debit": "15.20",
+    "credit": "",
+    "balance": "15.20"
+  },
+  {
+    "date": "16 Oct 2024",
+    "details": "365 MOLD INTERIORS",
+    "debit": "",
+    "credit": "3,977.60",
+    "balance": ""
+  },
+  {
+    "date": "17 Oct 2024",
+    "details": "POSC16OCT KFC CARRICK",
+    "debit": "20.80",
+    "credit": "",
+    "balance": "20.80"
+  },
+  {
+    "date": "18 Oct 2024",
+    "details": "POSC17OCT SPAR SHANOW",
+    "debit": "26.45",
+    "credit": "",
+    "balance": "26.45"
+  },
+  {
+    "date": "21 Oct 2024",
+    "details": "POSC20OCT TESCO STORE",
+    "debit": "16.50",
+    "credit": "",
+    "balance": "16.50"
+  },
+  {
+    "date": "22 Oct 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "416.00",
+    "balance": "416.00"
+  },
+  {
+    "date": "22 Oct 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "5,176.95"
+  },
+  {
+    "date": "23 Oct 2024",
+    "details": "365 Igor Demian",
+    "debit": "",
+    "credit": "1,000.00",
+    "balance": ""
+  },
+  {
+    "date": "24 Oct 2024",
+    "details": "365 Igor Demian",
+    "debit": "",
+    "credit": "1,160.00",
+    "balance": ""
+  },
+  {
+    "date": "25 Oct 2024",
+    "details": "POSC24OCT CIRCLE K CE",
+    "debit": "3.00",
+    "credit": "",
+    "balance": "3.00"
+  },
+  {
+    "date": "29 Oct 2024",
+    "details": "365 MOLD INTERIORS",
+    "debit": "",
+    "credit": "2,966.40",
+    "balance": ""
+  },
+  {
+    "date": "30 Oct 2024",
+    "details": "POSC29OCT DUBLIN PORT",
+    "debit": "3.50",
+    "credit": "",
+    "balance": "3.50"
+  },
+  {
+    "date": "30 Oct 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "4,994.96"
+  },
+  {
+    "date": "31 Oct 2024",
+    "details": "POSC30OCT CAMPUS SPAR",
+    "debit": "3.20",
+    "credit": "",
+    "balance": "3.20"
+  },
+  {
+    "date": "01 Nov 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "3,536.00",
+    "balance": ""
+  },
+  {
+    "date": "04 Nov 2024",
+    "details": "POSC01NOV TESCO STORE",
+    "debit": "12.45",
+    "credit": "",
+    "balance": "12.45"
+  },
+  {
+    "date": "05 Nov 2024",
+    "details": "POSC04NOV CAMPUS SPAR",
+    "debit": "26.25",
+    "credit": "",
+    "balance": "26.25"
+  },
+  {
+    "date": "06 Nov 2024",
+    "details": "365 MOLD INTERIORS",
+    "debit": "",
+    "credit": "1,560.00",
+    "balance": ""
+  },
+  {
+    "date": "07 Nov 2024",
+    "details": "PARAMUD BROTHERS LTD",
+    "debit": "",
+    "credit": "1,749.60",
+    "balance": ""
+  },
+  {
+    "date": "07 Nov 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "10,316.71"
+  },
+  {
+    "date": "08 Nov 2024",
+    "details": "POSC07NOV RINGSEND TO",
+    "debit": "3.40",
+    "credit": "",
+    "balance": "3.40"
+  },
+  {
+    "date": "11 Nov 2024",
+    "details": "POSC10NOV TESCO STORE",
+    "debit": "25.65",
+    "credit": "",
+    "balance": "25.65"
+  },
+  {
+    "date": "12 Nov 2024",
+    "details": "POSC11NOV SQ *TRISPAC",
+    "debit": "18.10",
+    "credit": "",
+    "balance": "18.10"
+  },
+  {
+    "date": "13 Nov 2024",
+    "details": "POSC12NOV LOUGH INN",
+    "debit": "21.70",
+    "credit": "",
+    "balance": "21.70"
+  },
+  {
+    "date": "14 Nov 2024",
+    "details": "POSC13NOV RINGSEND TO",
+    "debit": "2.20",
+    "credit": "",
+    "balance": "2.20"
+  },
+  {
+    "date": "15 Nov 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "2,308.00",
+    "balance": ""
+  },
+  {
+    "date": "18 Nov 2024",
+    "details": "POSC16NOV APPLEGREEN",
+    "debit": "25.65",
+    "credit": "",
+    "balance": "25.65"
+  },
+  {
+    "date": "18 Nov 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "5,525.35"
+  },
+  {
+    "date": "19 Nov 2024",
+    "details": "POSC18NOV SPAR EAST W",
+    "debit": "26.45",
+    "credit": "",
+    "balance": "26.45"
+  },
+  {
+    "date": "20 Nov 2024",
+    "details": "POSC19NOV LOUGH INN",
+    "debit": "11.60",
+    "credit": "",
+    "balance": "11.60"
+  },
+  {
+    "date": "21 Nov 2024",
+    "details": "POSC20NOV SPAR CHERRY",
+    "debit": "3.70",
+    "credit": "",
+    "balance": "3.70"
+  },
+  {
+    "date": "22 Nov 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "166.00",
+    "balance": "166.00"
+  },
+  {
+    "date": "25 Nov 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "2,038.00",
+    "balance": ""
+  },
+  {
+    "date": "25 Nov 2024",
+    "details": "BALANCE FORWARD",
+    "debit": "",
+    "credit": "",
+    "balance": "8,238.82"
+  },
+  {
+    "date": "26 Nov 2024",
+    "details": "POSC25NOV SPAR CHERRY",
+    "debit": "14.80",
+    "credit": "",
+    "balance": "14.80"
+  },
+  {
+    "date": "27 Nov 2024",
+    "details": "POSC26NOV SPAR CHERRY",
+    "debit": "14.80",
+    "credit": "",
+    "balance": "14.80"
+  },
+  {
+    "date": "28 Nov 2024",
+    "details": "POSC27NOV SQ *TRISPAC",
+    "debit": "3.40",
+    "credit": "",
+    "balance": "3.40"
+  },
+  {
+    "date": "29 Nov 2024",
+    "details": "365 RIE LTD",
+    "debit": "",
+    "credit": "814.00",
+    "balance": "814.00"
+  }
+]
+;
+
+export default function TestPage() {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedTest, setSelectedTest] = useState('AIB');
+
+  const runTest = async (testType) => {
+    setLoading(true);
+    setError(null);
+    setTransactions([]);
+
+    const fileName = testType === 'AIB' ? '/test_statement.pdf' : '/bank_statement_2.pdf';
+
+    try {
+      const response = await fetch(fileName);
+      if (!response.ok) throw new Error(`Failed to fetch ${fileName}`);
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+
+      await parsePDF(file, (progress) => console.log(`Progress: ${progress}%`))
+        .then(data => {
+          setTransactions(data.transactions || []);
+        });
+    } catch (err) {
+      console.error("Test failed:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    runTest(selectedTest);
+  }, [selectedTest]);
+
+  const expectedData = selectedTest === 'AIB' ? EXPECTED_DATA_AIB : EXPECTED_DATA_BOI;
+
+  // Helper to find a matching transaction
+  const findMatch = (expected, actualList) => {
+    const normalize = (str) => str ? str.replace(/\s+/g, ' ').trim() : '';
+    const cleanAmount = (str) => str ? str.replace(/,/g, '').trim() : '';
+
+    // Debug BALANCE FORWARD
+    const isBalanceForward = expected.details && expected.details.includes('BALANCE FORWARD');
+    if (isBalanceForward) {
+      console.log(`[TestPage] Looking for BALANCE FORWARD match. Expected:`, expected);
+      console.log(`[TestPage] Expected date: "${expected.date}"`);
+      console.log(`[TestPage] Expected details normalized: "${normalize(expected.details)}"`);
+    }
+
+    return actualList.find(actual => {
+      const dateMatch = actual.date === expected.date;
+      const debitMatch = cleanAmount(actual.debit) === cleanAmount(expected.debit);
+      const creditMatch = cleanAmount(actual.credit) === cleanAmount(expected.credit);
+      const detailsMatch = normalize(actual.details).includes(normalize(expected.details)) ||
+        normalize(expected.details).includes(normalize(actual.details));
+
+      // Debug BALANCE FORWARD - log ALL actual transactions for comparison
+      if (isBalanceForward && actual.details && actual.details.includes('BALANCE FORWARD')) {
+        console.log(`[TestPage] Found BALANCE FORWARD actual:`, actual);
+        console.log(`  actual.date: "${actual.date}" vs expected: "${expected.date}" => ${dateMatch}`);
+        console.log(`  actual.details normalized: "${normalize(actual.details)}" vs expected: "${normalize(expected.details)}" => ${detailsMatch}`);
+        console.log(`  debitMatch: ${debitMatch}, creditMatch: ${creditMatch}`);
+      }
+
+      return dateMatch && debitMatch && creditMatch && detailsMatch;
+    });
+  };
+
+  return (
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>Bank Statement Parser Test</h1>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ marginRight: '10px' }}>Select Test Case:</label>
+        <select
+          value={selectedTest}
+          onChange={(e) => {
+            setSelectedTest(e.target.value);
+            setTransactions([]);
+            setError(null);
+          }}
+          style={{ padding: '5px', fontSize: '16px' }}
+        >
+          <option value="AIB">AIB Statement</option>
+          <option value="BOI">Bank of Ireland</option>
+        </select>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <button
+          onClick={() => runTest(selectedTest)}
+          disabled={loading}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {loading ? 'Parsing...' : 'Parse PDF'}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ color: 'red', marginBottom: '20px', padding: '10px', backgroundColor: '#ffe6e6' }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {transactions.length > 0 && (
+        <div>
+          <h2>Results ({selectedTest})</h2>
+          <div style={{ marginBottom: '10px' }}>
+            <strong>Total Expected:</strong> {expectedData.length} |
+            <strong> Total Actual:</strong> {transactions.length}
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f0f0f0', textAlign: 'left' }}>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Details</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Debit</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Credit</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expectedData.map((expected, index) => {
+                const match = findMatch(expected, transactions);
+                const isPass = !!match;
+
+                return (
+                  <tr key={index} style={{ backgroundColor: isPass ? '#e6ffe6' : '#ffe6e6' }}>
+                    <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold', color: isPass ? 'green' : 'red' }}>
+                      {isPass ? 'PASS' : 'FAIL'}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                      <div>Exp: {expected.date}</div>
+                      {match && <div>Act: {match.date}</div>}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                      <div>Exp: {expected.details}</div>
+                      {match && <div>Act: {match.details}</div>}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                      <div>Exp: {expected.debit}</div>
+                      {match && <div>Act: {match.debit}</div>}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                      <div>Exp: {expected.credit}</div>
+                      {match && <div>Act: {match.credit}</div>}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                      <div>Exp: {expected.balance}</div>
+                      {match && <div>Act: {match.balance}</div>}
+                    </td>
+                  </tr>
+                );
+              })}
+              {transactions.length > expectedData.length && (
+                Array.from({ length: Math.min(20, transactions.length - expectedData.length) }).map((_, i) => {
+                  // Only show first 20 extra transactions to avoid huge page
+                  const index = i;
+                  // Wait, I need to find which transactions are NOT matched.
+                  // But for now just showing "Extra" is hard because I don't know which ones matched.
+                  // Simplification: Just show a message about extra transactions.
+                  return null;
+                })
+              )}
+            </tbody>
+          </table>
+
+          <div style={{ marginTop: '20px' }}>
+            <h3>Extra Transactions Found ({transactions.length - expectedData.length > 0 ? transactions.length - expectedData.length : 0})</h3>
+            <p>Note: These are present in the PDF but not in the expected list.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

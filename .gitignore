@@ -1,0 +1,37 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Bank statements and sensitive financial documents
+bank_statement*.pdf
+bank_statement*.PDF
+**/bank_statement*
+*.bank_statement
+bank-statement*.pdf
+bank-statement*.PDF
+**/bank-statement*
+statement*.pdf
+*.statement.pdf
+# Debug and output files
+debug_output*.txt
