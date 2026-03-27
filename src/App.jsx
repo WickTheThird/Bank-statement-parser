@@ -16,6 +16,7 @@ function App() {
   const [files, setFiles] = useState([]);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [globalError, setGlobalError] = useState('');
+  const [mergeExports, setMergeExports] = useState(true);
 
   const parsedFiles = useMemo(
     () => files.filter(file => file.transactions.length > 0),
@@ -220,6 +221,7 @@ function App() {
         label: `${file.file.name.replace(/\.[^/.]+$/, '')}${file.bankType ? `-${file.bankType}` : ''}`,
       })),
       `bank-statements-${dateSuffix}.xlsx`,
+      { singleSheet: mergeExports },
     );
   };
 
@@ -401,7 +403,16 @@ function App() {
                 );
               })}
 
-              <div className="flex flex-wrap gap-3 justify-end pt-2">
+              <div className="flex flex-wrap gap-3 items-center justify-end pt-2">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={mergeExports}
+                    onChange={(e) => setMergeExports(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  Merge all into single sheet
+                </label>
                 <button
                   onClick={handleReset}
                   className="px-4 py-3 bg-white hover:bg-gray-50 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl transition-colors text-sm"

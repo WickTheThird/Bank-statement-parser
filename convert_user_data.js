@@ -288,8 +288,20 @@ const transactions = lines.map(line => {
     let credit = parts[3]?.trim();
     let balance = parts[4]?.trim();
 
-    // Keep date in DD MMM YYYY format to match parser output
-    // Parser uses normalizeDateAIB which outputs "DD MMM YYYY" format
+    // Normalize date to DD/MM/YYYY format to match parser output
+    if (date) {
+        const months = {
+            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+            'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+        };
+        const match = date.match(/^(\d{2}) ([A-Za-z]{3}) (\d{4})$/);
+        if (match) {
+            const [_, day, month, year] = match;
+            if (months[month]) {
+                date = `${day}/${months[month]}/${year}`;
+            }
+        }
+    }
 
     // Fix shifted columns: if balance is present and credit equals balance, it's likely just balance
     if (balance && credit === balance) {

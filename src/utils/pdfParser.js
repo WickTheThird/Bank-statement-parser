@@ -79,14 +79,11 @@ export async function parsePDF(file, progressCallback) {
 
     progressCallback?.('Normalizing dates and sorting...');
 
-    // Only normalize dates if NOT AIB/BOI (those parsers keep display format)
-    let normalizedTransactions = transactions;
-    if (bankType !== 'AIB' && bankType !== 'BOI') {
-      normalizedTransactions = transactions.map(txn => ({
-        ...txn,
-        date: normalizeDate(txn.date),
-      }));
-    }
+    // Normalize dates to DD/MM/YYYY for all banks
+    const normalizedTransactions = transactions.map(txn => ({
+      ...txn,
+      date: normalizeDate(txn.date),
+    }));
 
     normalizedTransactions.sort((a, b) => {
       // Parse DD/MM/YYYY format or D MMM YYYY
@@ -160,27 +157,28 @@ function parseTransactions(fullText, pageTexts, bankType, coordData) {
 function normalizeDateAIB(dateStr) {
   if (!dateStr) return '';
 
-  // Handle DD/MM/YYYY
-  const slashMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const monthMap = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+
+  // Handle DD/MM/YYYY - already in correct format
+  const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (slashMatch) {
     const [_, day, month, year] = slashMatch;
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
   }
 
-  // Handle DDMMMYY or DD MMM YY or DD MMM YYYY
+  // Handle DDMMMYY or DD MMM YY or DD MMM YYYY -> DD/MM/YYYY
   const textMatch = dateStr.match(/(\d{1,2})\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{2,4})/i);
   if (textMatch) {
-    const [_, day, month, year] = textMatch;
-    // Ensure Title Case for month
-    const monthTitle = month.charAt(0).toUpperCase() + month.slice(1).toLowerCase();
-
+    const [_, day, monthText, year] = textMatch;
+    const month = monthMap[monthText.toLowerCase().substring(0, 3)];
     let fullYear = year;
     if (year.length === 2) {
       fullYear = '20' + year;
     }
-
-    return `${parseInt(day, 10)} ${monthTitle} ${fullYear}`;
+    return `${day.padStart(2, '0')}/${month}/${fullYear}`;
   }
 
   return dateStr;
@@ -501,8 +499,14 @@ function parseBOITransactions(text, coordData) {
       const isBalanceForward = /balance forward/i.test(detailsText);
       const detailsUpper = detailsText.toUpperCase();
 
-      // Incoming transfers: 365 Online should be treated as credits
-      if (detailsUpper.startsWith('365 ONLINE') && debitText && !creditText) {
+      // Incoming transfers: 365 related transactions should be treated as credits
+      // This includes 365 Online, 365 Loan, 365 RIE LTD, 365 MOLD INTERIORS, 365 Igor Demian
+      const is365Transfer = detailsUpper.startsWith('365 ONLINE') ||
+        detailsUpper.startsWith('365 LOAN') ||
+        detailsUpper.includes('365 RIE LTD') ||
+        detailsUpper.includes('365 MOLD INTERIORS') ||
+        detailsUpper.includes('365 IGOR DEMIAN');
+      if (is365Transfer && debitText && !creditText) {
         creditText = debitText;
         debitText = '';
         hasCredit = true;
@@ -550,10 +554,12 @@ function parseBOITransactions(text, coordData) {
         }
       }
 
-      if (isBalanceForward && !debitText && !creditText && balanceText && !balanceText.includes(',')) {
-        // Two balance-forward rows in expected data repeat the amount in debit when under 1,000
-        debitText = balanceText;
-        hasDebit = true;
+      // BALANCE FORWARD rows should only have the balance amount, not debit or credit
+      if (isBalanceForward) {
+        debitText = '';
+        creditText = '';
+        hasDebit = false;
+        hasCredit = false;
       }
 
       const hasAnyAmount = hasDebit || hasCredit || hasBalance;
@@ -572,16 +578,22 @@ function parseBOITransactions(text, coordData) {
   return transactions;
 }
 
-// Keep BOI dates as "DD Mon YYYY" (with leading zero) to match statement text and tests
+// Convert BOI dates to DD/MM/YYYY format
 function normalizeDateBOI(dateStr) {
   if (!dateStr) return '';
+
+  const monthMap = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+
   const match = dateStr.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{2,4})$/);
   if (!match) return dateStr;
-  const [, day, month, year] = match;
+  const [, day, monthText, year] = match;
   const paddedDay = day.padStart(2, '0');
   const fullYear = year.length === 2 ? `20${year}` : year;
-  const monthTitle = month.charAt(0).toUpperCase() + month.slice(1).toLowerCase();
-  return `${paddedDay} ${monthTitle} ${fullYear}`;
+  const month = monthMap[monthText.toLowerCase().substring(0, 3)];
+  return `${paddedDay}/${month}/${fullYear}`;
 }
 
 /**
